@@ -528,13 +528,14 @@ pub mod mode {
             const UTF8_MOUSE          = 0b0000_0100_0000_0000_0000;
             const ALTERNATE_SCROLL    = 0b0000_1000_0000_0000_0000;
             const VI                  = 0b0001_0000_0000_0000_0000;
+            const BELL_IS_URGENT      = 0b0010_0000_0000_0000_0000;
             const ANY                 = std::u32::MAX;
         }
     }
 
     impl Default for TermMode {
         fn default() -> TermMode {
-            TermMode::SHOW_CURSOR | TermMode::LINE_WRAP | TermMode::ALTERNATE_SCROLL
+            TermMode::SHOW_CURSOR | TermMode::LINE_WRAP | TermMode::ALTERNATE_SCROLL | TermMode::BELL_IS_URGENT
         }
     }
 }
@@ -1670,7 +1671,9 @@ impl<T: EventListener> Handler for Term<T> {
     fn bell(&mut self) {
         trace!("Bell");
         self.visual_bell.ring();
-        self.event_proxy.send_event(Event::Urgent);
+        if self.mode.contains(TermMode::BELL_IS_URGENT) {
+            self.event_proxy.send_event(Event::Urgent);
+        }
     }
 
     #[inline]
@@ -2094,6 +2097,7 @@ impl<T: EventListener> Handler for Term<T> {
             ansi::Mode::Origin => self.mode.insert(TermMode::ORIGIN),
             ansi::Mode::DECCOLM => self.deccolm(),
             ansi::Mode::Insert => self.mode.insert(TermMode::INSERT), // heh
+            ansi::Mode::BellIsUrgent => self.mode.insert(TermMode::BELL_IS_URGENT),
             ansi::Mode::BlinkingCursor => {
                 trace!("... unimplemented mode");
             },
@@ -2136,6 +2140,7 @@ impl<T: EventListener> Handler for Term<T> {
             ansi::Mode::Origin => self.mode.remove(TermMode::ORIGIN),
             ansi::Mode::DECCOLM => self.deccolm(),
             ansi::Mode::Insert => self.mode.remove(TermMode::INSERT),
+            ansi::Mode::BellIsUrgent => self.mode.remove(TermMode::BELL_IS_URGENT),
             ansi::Mode::BlinkingCursor => {
                 trace!("... unimplemented mode");
             },
